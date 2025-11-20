@@ -1,91 +1,173 @@
 using TMPro;
+using Unity.Collections;
 using Unity.Netcode;
 using UnityEngine;
 
-[RequireComponent(typeof(MeshFilter), typeof(Collider))]
+[RequireComponent(typeof(Collider))]
 public class NetworkGhost : NetworkBehaviour
 {
-    private Collider _col;
+    public Material ghostMaterial;
+    
+    private Collider[] _colliders;
     private Rigidbody _rb;
-    private Material _mat;
+    private Renderer[] _renderers;
     private TMP_Text _txt;
+    private Heros _heros;
     
     // Numéro de niveau où se trouve ce joueur
-    private NetworkVariable<int> levelIndex = new NetworkVariable<int>(
-        -1,                                           // valeur par défaut
-        NetworkVariableReadPermission.Everyone,       // tout le monde peut lire
-        NetworkVariableWritePermission.Owner);        // seul le propriétaire écrit
+    private NetworkVariable<int> _levelIndex = new NetworkVariable<int>(
+        -1,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Owner);
 
     private void Awake()
     {
-        _col = GetComponent<Collider>();
+        // On récupère tout ce qu’il faut avant OnNetworkSpawn
+        _colliders = GetComponentsInChildren<Collider>(true);
         _rb = GetComponent<Rigidbody>();
-        _mat = GetComponent<Material>();
-        _txt = GetComponentInChildren<TMP_Text>();
+        _renderers = GetComponentsInChildren<Renderer>(true);
+        _txt = GetComponentInChildren<TMP_Text>(true);
+        _heros = GetComponent<Heros>();
+
+        Debug.Log("Colliders: " + _colliders.Length);
+        Debug.Log("Rigidbody: " + _rb);
+        Debug.Log("Renderers: " + _renderers.Length);
+        Debug.Log("TMP_Text: " + _txt);
     }
 
     public override void OnNetworkSpawn()
     {
-        levelIndex.OnValueChanged += OnRemoteLevelChanged;
+        _levelIndex.OnValueChanged += OnRemoteLevelChanged;
+        
+        if (_heros != null)
+        {
+            _heros.PlayerName.OnValueChanged += OnPlayerNameChanged;
+        }
+
         if (IsOwner)
         {
-            // Ce héros est le joueur local sur CETTE machine
-            // On le place au spawn du level courant
+            // Joueur local
             if (Levels.instance != null)
             {
                 Debug.Log($"Placing local player at spawn for level {Levels.instance.currentLevel}");
                 transform.position = Levels.instance.SpawnPosition;
-                levelIndex.Value = Levels.instance.currentLevel;
+                _levelIndex.Value = Levels.instance.currentLevel;
             }
-        } else {
-            // Désactiver les collisions pour les ghosts
-            _col.enabled = false;
-            _rb.isKinematic = true;
 
-            // Effet visuel “fantôme”
-            Color ghostColor = _mat.color;
-            ghostColor.a = 0.3f;
-            _mat.color = ghostColor;
-            
-            // Pseudo du joueur
-            _txt.gameObject.SetActive(true);
-            _txt.text = $"{name}";
+            // Le pseudo côté owner sera géré dans Heros (voir section 2)
         }
+        else
+        {
+            // --- GHOST ---
+
+            // Désactiver TOUTES les collisions de ce joueur sur cette machine
+            if (_colliders != null)
+            {
+                foreach (var col in _colliders)
+                    col.enabled = false;
+            }
+
+            if (_rb != null)
+            {
+                _rb.isKinematic = true;
+            }
+
+            // Appliquer le material de fantôme à TOUS les renderers
+            if (ghostMaterial != null && _renderers != null)
+            {
+                foreach (var r in _renderers)
+                {
+                    r.material = ghostMaterial;
+                }
+            }
+
+            // Affichage du pseudo 
+            if (_txt != null)
+            {
+                _txt.enabled = true;
+                UpdateNameFromHeros();
+            }
+        }
+        
+        RefreshVisibility();
+    }
+    
+    private void UpdateNameFromHeros()
+    {
+        if (_txt == null || _heros == null) return;
+
+        var nameValue = _heros.PlayerName.Value.ToString();
+        _txt.text = nameValue;
+        _txt.gameObject.SetActive(!string.IsNullOrEmpty(nameValue));
     }
     
     private void OnDestroy()
     {
-        levelIndex.OnValueChanged -= OnRemoteLevelChanged;
+        _levelIndex.OnValueChanged -= OnRemoteLevelChanged;
+
+        if (_heros != null)
+        {
+            _heros.PlayerName.OnValueChanged -= OnPlayerNameChanged;
+        }
     }
 
     private void Update()
     {
-        // Le joueur local garde sa NetworkVariable de niveau à jour
-        if (!IsOwner) return;
-
         if (Levels.instance == null) return;
 
         int localLevel = Levels.instance.currentLevel;
 
-        if (levelIndex.Value != localLevel)
+        if (IsOwner)
         {
-            levelIndex.Value = localLevel;
+            // Le joueur local garde sa NetworkVariable de niveau à jour
+            if (_levelIndex.Value != localLevel)
+            {
+                _levelIndex.Value = localLevel;
+            }
+        }
+        else
+        {
+            // Ici on s'intéresse aux fantômes : si NOTRE niveau local change,
+            // il faut re-appliquer la règle de visibilité
+            RefreshVisibility();
         }
     }
     
-    /// <summary>
-    /// Appelé sur tous les clients quand ce joueur change de niveau.
-    /// </summary>
-    private void OnRemoteLevelChanged(int previous, int current)
+    private void RefreshVisibility()
     {
-        if (Levels.instance == null || _mat == null)
+        if (Levels.instance == null || _renderers == null)
             return;
 
-        // On ne touche pas au rendu de notre propre joueur ici
+        // On ne gère la visibilité que pour les fantômes (pas pour notre propre joueur)
         if (IsOwner) return;
 
-        bool sameLevelAsLocal = (current == Levels.instance.currentLevel);
+        bool sameLevelAsLocal = (_levelIndex.Value == Levels.instance.currentLevel);
+        bool visible = sameLevelAsLocal;
 
-        gameObject.SetActive(sameLevelAsLocal);
+        // On laisse l'objet réseau actif, on masque juste le rendu + le pseudo
+        foreach (var r in _renderers)
+        {
+            if (r != null)
+                r.enabled = visible;
+        }
+
+        if (_txt != null)
+        {
+            _txt.enabled = visible;
+        }
+    }
+    
+    private void OnRemoteLevelChanged(int previous, int current)
+    {
+        string playerName = _heros != null ? _heros.PlayerName.Value.ToString() : "?";
+        Debug.Log($"[LAN] OnRemoteLevelChanged called for player \"{playerName}\" from {previous} to {current}");
+
+        RefreshVisibility();
+    }
+    
+    
+    private void OnPlayerNameChanged(FixedString64Bytes previous, FixedString64Bytes current)
+    {
+        UpdateNameFromHeros();
     }
 }

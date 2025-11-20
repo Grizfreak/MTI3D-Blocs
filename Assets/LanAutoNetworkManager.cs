@@ -22,9 +22,8 @@ public class LanAutoNetworkManager : MonoBehaviour
     [SerializeField] private ushort gamePort = 7777;
     [SerializeField] private ushort discoveryPort = 7778;
     [SerializeField] private float discoveryTimeoutSeconds = 0.75f;
-
-    [Header("Version de build à matcher")]
-    [SerializeField] private string buildVersion = "1.0.0";
+    
+    private string _buildVersion = "1.0.0";
 
     private NetworkManager _networkManager;
     private UnityTransport _transport;
@@ -35,6 +34,7 @@ public class LanAutoNetworkManager : MonoBehaviour
 
     private void Awake()
     {
+        _buildVersion = Application.version;
         _networkManager = GetComponent<NetworkManager>();
         _transport = GetComponent<UnityTransport>();
 
@@ -53,7 +53,8 @@ public class LanAutoNetworkManager : MonoBehaviour
     private async void Start()
     {
         DontDestroyOnLoad(gameObject);
-
+        Debug.Log($"[LAN] buildVersion = {_buildVersion}, gamePort = {gamePort}, discoveryPort = {discoveryPort}");
+        
         // 1. Essayer de trouver un host déjà présent sur le LAN
         var hostEndPoint = await TryDiscoverHostAsync();
 
@@ -81,7 +82,7 @@ public class LanAutoNetworkManager : MonoBehaviour
             udp.EnableBroadcast = true;
             udp.MulticastLoopback = false;
 
-            string msg = $"{DiscoveryRequestPrefix};{buildVersion}";
+            string msg = $"{DiscoveryRequestPrefix};{_buildVersion}";
             byte[] data = Encoding.UTF8.GetBytes(msg);
             var broadcast = new IPEndPoint(IPAddress.Broadcast, discoveryPort);
 
@@ -122,7 +123,7 @@ public class LanAutoNetworkManager : MonoBehaviour
             if (parts.Length < 3 || parts[0] != DiscoveryResponsePrefix)
                 return null;
 
-            if (parts[2] != buildVersion)
+            if (parts[2] != _buildVersion)
             {
                 Debug.LogWarning($"[LAN] Host trouvé mais version différente ({parts[2]}), on l'ignore.");
                 return null;
@@ -143,7 +144,7 @@ public class LanAutoNetworkManager : MonoBehaviour
         // Pour un client : address = IP du host, port = port du host
         _transport.SetConnectionData(hostEndPoint.Address.ToString(), (ushort)hostEndPoint.Port);
         // On encode aussi la version dans le payload de connexion
-        _networkManager.NetworkConfig.ConnectionData = Encoding.UTF8.GetBytes(buildVersion);
+        _networkManager.NetworkConfig.ConnectionData = Encoding.UTF8.GetBytes(_buildVersion);
 
         _networkManager.StartClient();
     }
@@ -155,7 +156,7 @@ public class LanAutoNetworkManager : MonoBehaviour
     {
         // Pour le host : "0.0.0.0" écoute sur toutes les interfaces réseau
         _transport.SetConnectionData("0.0.0.0", gamePort, "0.0.0.0");
-        _networkManager.NetworkConfig.ConnectionData = Encoding.UTF8.GetBytes(buildVersion);
+        _networkManager.NetworkConfig.ConnectionData = Encoding.UTF8.GetBytes(_buildVersion);
 
         _networkManager.StartHost();
     }
@@ -184,14 +185,14 @@ public class LanAutoNetworkManager : MonoBehaviour
                             continue;
 
                         string clientVersion = parts[1];
-                        if (clientVersion != buildVersion)
+                        if (clientVersion != _buildVersion)
                         {
                             // On ignore les clients de version différente
                             continue;
                         }
 
                         // Réponse : "GHOST_GAME_HOST;port;version"
-                        string responseText = $"{DiscoveryResponsePrefix};{gamePort};{buildVersion}";
+                        string responseText = $"{DiscoveryResponsePrefix};{gamePort};{_buildVersion}";
                         byte[] responseBytes = Encoding.UTF8.GetBytes(responseText);
                         await udp.SendAsync(responseBytes, responseBytes.Length, result.RemoteEndPoint);
                     }
@@ -234,11 +235,11 @@ public class LanAutoNetworkManager : MonoBehaviour
             ? Encoding.UTF8.GetString(payload)
             : "UNKNOWN";
 
-        if (clientVersion != buildVersion)
+        if (clientVersion != _buildVersion)
         {
             response.Approved = false;
             response.CreatePlayerObject = false;
-            response.Reason = $"Version incompatible (serveur {buildVersion}, client {clientVersion})";
+            response.Reason = $"Version incompatible (serveur {_buildVersion}, client {clientVersion})";
             return;
         }
 

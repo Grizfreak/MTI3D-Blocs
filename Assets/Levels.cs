@@ -60,11 +60,11 @@ public class Levels : MonoBehaviour
                 playerTransform.position = SpawnPosition;
 
                 // Reset physique
-                var rb = playerTransform.GetComponent<Rigidbody2D>();
+                var rb = playerTransform.GetComponent<Rigidbody>();
                 if (rb != null)
                 {
                     rb.linearVelocity = Vector2.zero;
-                    rb.angularVelocity = 0f;
+                    rb.angularVelocity = Vector2.zero;
                 }
 
                 // Si tu veux être clean : réactiver la physique ici
