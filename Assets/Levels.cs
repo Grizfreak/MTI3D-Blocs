@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
+using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.Networking;
 
@@ -24,6 +25,8 @@ public class Levels : MonoBehaviour
     public float currentTime = 0;
     
     public bool counting = true;
+    
+    public Vector3 SpawnPosition { get; private set; } = Vector3.zero;
 
     private void Awake()
     {
@@ -46,6 +49,37 @@ public class Levels : MonoBehaviour
             CreateLevel(text);
             Debug.Log("Level load error: " + e.Message);
             counting = false;   
+        }
+        
+        if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
+        {
+            var localClient = NetworkManager.Singleton.LocalClient;
+            if (localClient != null && localClient.PlayerObject != null)
+            {
+                Transform playerTransform = localClient.PlayerObject.transform;
+                playerTransform.position = SpawnPosition;
+
+                // Reset physique
+                var rb = playerTransform.GetComponent<Rigidbody2D>();
+                if (rb != null)
+                {
+                    rb.linearVelocity = Vector2.zero;
+                    rb.angularVelocity = 0f;
+                }
+
+                // Si tu veux être clean : réactiver la physique ici
+                var heros = playerTransform.GetComponent<Heros>();
+                if (heros != null)
+                {
+                    // ex: heros.EnablePhysics(); si tu as cette méthode
+                }
+            }
+        }
+        else
+        {
+            // Mode solo : on crée le héros maintenant que la map existe
+            Heros heros = Instantiate<Heros>(herosPrefab, this.transform);
+            heros.transform.position = SpawnPosition;
         }
     }
 
@@ -97,8 +131,7 @@ public class Levels : MonoBehaviour
         {
             case 'S':
                 //Heros
-                Heros heros = Instantiate<Heros>(herosPrefab, this.transform);
-                heros.transform.position = position;
+                SpawnPosition = position;
                 break;
             default:
                 Bloc blocPrefab = blocsPrefabs.Find(bloc => bloc.typeChar == blocType);
