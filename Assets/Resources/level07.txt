@@ -6,10 +6,10 @@ XXXUX         XXXXXXXXXXX
 XKKKK                   X
 X                       X
 X                  X    X
-X                  X    X
-X                  X    X
-X                  X    X
-X                  X    X
+X      P           X    X
+X                 PX    X
+X                 PX    X
+X                 PX    X
 X                  X    X
 X                  KEEEEX
 XUUUUUUUUUUUUUUUUUUX 

@@ -5,10 +5,10 @@ XXXRX                   K
 XXXUX    XXXXXXXXXXXXXXXX
 X                       X
 X                       X
-X                  X    X
-X                  X    X
-X                  X    X
-X                  X    X
+X               P  X    X
+X               P  X    X
+X               P  X    X
+X               P  X    X
 X                  X    X
 X                  X    X
 X                  KEEEEX

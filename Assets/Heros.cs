@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 public class Heros : MonoBehaviour
@@ -21,6 +22,15 @@ public class Heros : MonoBehaviour
 
     }
 
+    private void OnTriggerEnter(Collider other)
+    {
+        // Lorsque le heros percute un bloc en trigger, on lance l’action du bloc
+        if (other.gameObject.TryGetComponent(out Bloc bloc))
+        {
+            bloc.DoAction(this);
+        }
+    }
+
     public void Jump()
     {
         if (Time.time - previousJump > 0.2f)
@@ -34,6 +44,7 @@ public class Heros : MonoBehaviour
     {
         if (Input.GetKeyDown(KeyCode.R))
         {
+            Levels.instance.SetCoinsCollectedInLevel(0);
             Levels.instance.KillAll();
             Levels.instance.LoadLevel();
         }

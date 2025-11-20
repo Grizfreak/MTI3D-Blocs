@@ -15,6 +15,8 @@ public class Bloc : MonoBehaviour
                 if (Levels.instance.transform.childCount > 0)
                 {
                     Levels.instance.currentLevel++;
+                    Levels.instance.SetCoins(Levels.instance.GetCoins() + Levels.instance.GetCoinsCollectedInLevel());
+                    Levels.instance.SetCoinsCollectedInLevel(0);
                     Levels.instance.KillAll();
                     Levels.instance.LoadLevel();
                 }
@@ -23,6 +25,7 @@ public class Bloc : MonoBehaviour
             }
             case 'K': // Game Over!
             {
+                Levels.instance.SetCoinsCollectedInLevel(0);
                 Levels.instance.KillAll();
                 Levels.instance.LoadLevel();
                 break;
@@ -40,6 +43,12 @@ public class Bloc : MonoBehaviour
             case 'R':
             {
                 deplacement = Vector3.right;
+                break;
+            }
+            case 'P':
+            {
+                Levels.instance.SetCoinsCollectedInLevel(Levels.instance.GetCoinsCollectedInLevel() + 1);
+                Destroy(this.gameObject);
                 break;
             }
         }

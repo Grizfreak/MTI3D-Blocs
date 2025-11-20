@@ -20,10 +20,14 @@ public class Levels : MonoBehaviour
     public int currentLevel = 1;
 
     [SerializeField] private TextMeshProUGUI chronoLabel;
+    [SerializeField] private TextMeshProUGUI coinLabel;
     
     public float currentTime = 0;
     
-    public bool counting = true;
+    public bool counting = false;
+
+    public int coinObtained = 0;
+    public int coinCollectedInLevel = 0;
 
     private void Awake()
     {
@@ -32,6 +36,7 @@ public class Levels : MonoBehaviour
 
     public void LoadLevel()
     {
+        if (!counting) counting = true;
         try
         {
             int numLevel = Levels.instance.currentLevel;
@@ -126,6 +131,8 @@ public class Levels : MonoBehaviour
             instance.currentLevel = 1;
             instance.KillAll();
             instance.LoadLevel();
+            instance.SetCoins(0);
+            instance.SetCoinsCollectedInLevel(0);
             instance.currentTime = 0;
             instance.counting = true;
         }
@@ -137,5 +144,27 @@ public class Levels : MonoBehaviour
         currentTime += Time.fixedDeltaTime;
         TimeSpan timeSpan = TimeSpan.FromSeconds(currentTime);
         chronoLabel.text = string.Format("{0:D2}:{1:D2}:{2:D2}", timeSpan.Minutes, timeSpan.Seconds, timeSpan.Milliseconds / 10);
+    }
+    
+    public void SetCoins(int count)
+    {
+        coinObtained = count;
+        coinLabel.text = "Coins : " + coinObtained;
+    }
+    
+    public void SetCoinsCollectedInLevel(int count)
+    {
+        coinCollectedInLevel = count;
+        coinLabel.text = "Coins : " + (coinObtained + coinCollectedInLevel);
+    }
+
+    public int GetCoins()
+    {
+        return coinObtained;
+    }
+    
+    public int GetCoinsCollectedInLevel()
+    {
+        return coinCollectedInLevel;
     }
 }
