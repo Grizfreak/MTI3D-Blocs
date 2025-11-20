@@ -1,23 +1,18 @@
-using System;
-using Unity.Netcode;
 using UnityEngine;
 
-public class Heros : NetworkBehaviour
+public class Heros : MonoBehaviour
 {
     Vector2 acceleration = Vector2.zero;
     float previousJump = 0;
     Rigidbody rigidbody;
-    private String name;
-
-    private void Awake()
+    
+    void Start()
     {
-        name = Environment.UserName;
         rigidbody = GetComponent<Rigidbody>();
     }
 
     void OnCollisionEnter(Collision collision)
     {
-        if(!IsOwner) return;
     // Lorsque le heros percute un bloc, on lance l’action du bloc
         if (collision.gameObject.TryGetComponent(out Bloc bloc))
         {
@@ -28,7 +23,6 @@ public class Heros : NetworkBehaviour
 
     public void Jump()
     {
-        if(!IsOwner) return;
         if (Time.time - previousJump > 0.2f)
         {
             previousJump = Time.time;
@@ -38,7 +32,6 @@ public class Heros : NetworkBehaviour
 
     void Update()
     {
-        if(!IsOwner) return;
         if (Input.GetKeyDown(KeyCode.R))
         {
             Levels.instance.KillAll();
@@ -48,7 +41,7 @@ public class Heros : NetworkBehaviour
     
     void FixedUpdate()
     {
-        if(!IsOwner) return;
+        
         if (Input.GetKey(KeyCode.LeftArrow) || Input.GetKey(KeyCode.A))
         {
             acceleration.x -= 0.2f;
