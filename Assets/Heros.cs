@@ -29,15 +29,19 @@ public class Heros : MonoBehaviour
             GetComponent<Rigidbody>().AddForce(15.0f * Vector3.up, ForceMode.Impulse);
         }
     }
-    
-    void FixedUpdate()
+
+    void Update()
     {
         if (Input.GetKeyDown(KeyCode.R))
         {
             Levels.instance.KillAll();
             Levels.instance.LoadLevel();
-            return;
         }
+    }
+    
+    void FixedUpdate()
+    {
+        
         if (Input.GetKey(KeyCode.LeftArrow) || Input.GetKey(KeyCode.A))
         {
             acceleration.x -= 0.2f;

@@ -985,7 +985,7 @@ MonoBehaviour:
   - {fileID: 8367375051058461481, guid: 02d58d215d583594e889ac7a9f10e7a3, type: 3}
   - {fileID: 8367375051058461481, guid: 00054a88ecca56c45aba730be8300b6b, type: 3}
   herosPrefab: {fileID: -5709494779770848907, guid: 8be92bd7afc878f45af32757625e9164, type: 3}
-  currentLevel: 9
+  currentLevel: 1
   chronoLabel: {fileID: 492955821}
   currentTime: 0
   counting: 1

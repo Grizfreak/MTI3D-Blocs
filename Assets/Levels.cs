@@ -18,9 +18,6 @@ public class Levels : MonoBehaviour
     
     // level en cours
     public int currentLevel = 1;
-    
-    // url des fichiers niveaux
-    private string baseUrl = "https://www.zerokcm.fr/blocs/levels/";
 
     [SerializeField] private TextMeshProUGUI chronoLabel;
     
@@ -31,7 +28,6 @@ public class Levels : MonoBehaviour
     private void Awake()
     {
         instance = this;
-        chronoLabel.text = baseUrl + currentLevel.ToString("00");
     }
 
     public void LoadLevel()
@@ -120,7 +116,7 @@ public class Levels : MonoBehaviour
         }
     }
 
-    private void FixedUpdate()
+    private void Update()
     {
         if (Input.GetKey(KeyCode.F))
         {
@@ -129,8 +125,11 @@ public class Levels : MonoBehaviour
             instance.LoadLevel();
             instance.currentTime = 0;
             instance.counting = true;
-            return;
         }
+    }
+
+    private void FixedUpdate()
+    {
         if (!counting) return;
         currentTime += Time.fixedDeltaTime;
         TimeSpan timeSpan = TimeSpan.FromSeconds(currentTime);
