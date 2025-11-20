@@ -41,6 +41,9 @@ public class Levels : MonoBehaviour
             }
         } catch (Exception e)
         {
+            // Search for new levels in StreamingAssets
+            string text = System.IO.File.ReadAllText(Application.streamingAssetsPath + "/level" + Levels.instance.currentLevel.ToString("00") + ".txt");
+            CreateLevel(text);
             Debug.Log("Level load error: " + e.Message);
             counting = false;   
         }
