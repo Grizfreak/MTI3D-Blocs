@@ -2,7 +2,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
-using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.Networking;
 
@@ -23,10 +22,11 @@ public class Levels : MonoBehaviour
     [SerializeField] private TextMeshProUGUI chronoLabel;
     
     public float currentTime = 0;
-    
     public bool counting = true;
     
     public Vector3 SpawnPosition { get; private set; } = Vector3.zero;
+
+    private Heros _localHero;
 
     private void Awake()
     {
@@ -35,51 +35,41 @@ public class Levels : MonoBehaviour
 
     public void LoadLevel()
     {
+        Debug.Log($"[Levels] LoadLevel level={currentLevel}");
+
+        KillAll();
+
         try
         {
-            int numLevel = Levels.instance.currentLevel;
-            {
-                TextAsset txt = (TextAsset)Resources.Load("level" + numLevel.ToString("00"), typeof(TextAsset));
-                CreateLevel(txt.text);
-            }
-        } catch (Exception e)
+            int numLevel = currentLevel;
+            TextAsset txt = (TextAsset)Resources.Load("level" + numLevel.ToString("00"), typeof(TextAsset));
+            CreateLevel(txt.text);
+        }
+        catch (Exception e)
         {
-            // Search for new levels in StreamingAssets
-            string text = System.IO.File.ReadAllText(Application.streamingAssetsPath + "/level" + Levels.instance.currentLevel.ToString("00") + ".txt");
+            string text = System.IO.File.ReadAllText(
+                Application.streamingAssetsPath + "/level" + currentLevel.ToString("00") + ".txt"
+            );
             CreateLevel(text);
             Debug.Log("Level load error: " + e.Message);
             counting = false;   
         }
-        
-        if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
+
+        if (_localHero == null)
         {
-            var localClient = NetworkManager.Singleton.LocalClient;
-            if (localClient != null && localClient.PlayerObject != null)
-            {
-                Transform playerTransform = localClient.PlayerObject.transform;
-                playerTransform.position = SpawnPosition;
-
-                // Reset physique
-                var rb = playerTransform.GetComponent<Rigidbody>();
-                if (rb != null)
-                {
-                    rb.linearVelocity = Vector2.zero;
-                    rb.angularVelocity = Vector2.zero;
-                }
-
-                // Si tu veux être clean : réactiver la physique ici
-                var heros = playerTransform.GetComponent<Heros>();
-                if (heros != null)
-                {
-                    // ex: heros.EnablePhysics(); si tu as cette méthode
-                }
-            }
+            Debug.Log("[Levels] Création d'un nouveau héros local.");
+            _localHero = Instantiate(herosPrefab, SpawnPosition, Quaternion.identity, this.transform);
         }
         else
         {
-            // Mode solo : on crée le héros maintenant que la map existe
-            Heros heros = Instantiate<Heros>(herosPrefab, this.transform);
-            heros.transform.position = SpawnPosition;
+            Debug.Log("[Levels] Repositionnement du héros existant.");
+            _localHero.transform.position = SpawnPosition;
+            var rb = _localHero.GetComponent<Rigidbody>();
+            if (rb != null)
+            {
+                rb.linearVelocity = Vector3.zero;
+                rb.angularVelocity = Vector3.zero;
+            }
         }
     }
 
@@ -94,10 +84,7 @@ public class Levels : MonoBehaviour
         }
         else
         {
-            //assign string
             string levelString = www.downloadHandler.text;
-            
-            // generate now
             CreateLevel(levelString);
         }
     }
@@ -130,15 +117,13 @@ public class Levels : MonoBehaviour
         switch (blocType)
         {
             case 'S':
-                //Heros
                 SpawnPosition = position;
                 break;
             default:
                 Bloc blocPrefab = blocsPrefabs.Find(bloc => bloc.typeChar == blocType);
                 if (blocPrefab != null)
                 {
-                    Bloc bloc = Instantiate<Bloc>(blocPrefab, this.transform);
-                    bloc.transform.position = position;
+                    Bloc bloc = Instantiate(blocPrefab, position, Quaternion.identity, this.transform);
                 }
                 break;
         }
@@ -150,17 +135,20 @@ public class Levels : MonoBehaviour
         {
             Destroy(child.gameObject);
         }
+
+        // Très important : on invalide la référence au héros local
+        _localHero = null;
+        Debug.Log("[Levels] KillAll : enfants détruits, _localHero remis à null.");
     }
 
     private void Update()
     {
         if (Input.GetKey(KeyCode.F))
         {
-            instance.currentLevel = 1;
-            instance.KillAll();
-            instance.LoadLevel();
-            instance.currentTime = 0;
-            instance.counting = true;
+            currentLevel = 1;
+            LoadLevel();
+            currentTime = 0;
+            counting = true;
         }
     }
 
@@ -169,6 +157,10 @@ public class Levels : MonoBehaviour
         if (!counting) return;
         currentTime += Time.fixedDeltaTime;
         TimeSpan timeSpan = TimeSpan.FromSeconds(currentTime);
-        chronoLabel.text = string.Format("{0:D2}:{1:D2}:{2:D2}", timeSpan.Minutes, timeSpan.Seconds, timeSpan.Milliseconds / 10);
+        chronoLabel.text = string.Format("{0:D2}:{1:D2}:{2:D2}",
+            timeSpan.Minutes,
+            timeSpan.Seconds,
+            timeSpan.Milliseconds / 10
+        );
     }
 }

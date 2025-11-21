@@ -1,27 +1,35 @@
 using System;
-using Unity.Netcode;
 using UnityEngine;
 using Unity.Collections;
 
-public class Heros : NetworkBehaviour
+public class Heros : MonoBehaviour
 {
     Vector2 acceleration = Vector2.zero;
     float previousJump = 0;
     Rigidbody rigidbody;
-
-    public NetworkVariable<FixedString64Bytes> PlayerName = new NetworkVariable<FixedString64Bytes>(
-        "", 
-        NetworkVariableReadPermission.Everyone,
-        NetworkVariableWritePermission.Owner);
     
     private void Awake()
     {
         rigidbody = GetComponent<Rigidbody>();
+        Debug.Log("Local player name: " + Environment.UserName);
     }
+
+    private void Start()
+    {
+        if (P2PNetwork.Instance != null)
+        {
+            Debug.Log("[P2P] Heros.Start → RegisterLocalHero");
+            P2PNetwork.Instance.RegisterLocalHero(this);
+        }
+        else
+        {
+            Debug.LogWarning("[P2P] Heros.Start : P2PNetwork.Instance est null, enregistrement réseau impossible (vérifie la scène).");
+        }
+    }
+
 
     void OnCollisionEnter(Collision collision)
     {
-        if(!IsOwner) return;
     // Lorsque le heros percute un bloc, on lance l’action du bloc
         if (collision.gameObject.TryGetComponent(out Bloc bloc))
         {
@@ -32,7 +40,6 @@ public class Heros : NetworkBehaviour
 
     public void Jump()
     {
-        if(!IsOwner) return;
         if (Time.time - previousJump > 0.2f)
         {
             previousJump = Time.time;
@@ -42,7 +49,6 @@ public class Heros : NetworkBehaviour
 
     void Update()
     {
-        if(!IsOwner) return;
         if (Input.GetKeyDown(KeyCode.R))
         {
             Levels.instance.KillAll();
@@ -52,7 +58,6 @@ public class Heros : NetworkBehaviour
     
     void FixedUpdate()
     {
-        if(!IsOwner) return;
         if (Input.GetKey(KeyCode.LeftArrow) || Input.GetKey(KeyCode.A))
         {
             acceleration.x -= 0.2f;
@@ -71,16 +76,6 @@ public class Heros : NetworkBehaviour
         
         //lerp camera to follow heros
         Camera.main.transform.position = Vector3.Lerp(Camera.main.transform.position, new Vector3(transform.position.x, transform.position.y, Camera.main.transform.position.z), 0.1f);
-    }
-    
-    public override void OnNetworkSpawn()
-    {
-        if (IsOwner)
-        {
-            var envName = Environment.UserName;
-            Debug.Log("Setting player name to: " + envName);
-            PlayerName.Value = envName;
-        }
     }
 
 

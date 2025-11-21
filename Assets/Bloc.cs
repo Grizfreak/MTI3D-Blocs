@@ -15,7 +15,6 @@ public class Bloc : MonoBehaviour
                 if (Levels.instance.transform.childCount > 0)
                 {
                     Levels.instance.currentLevel++;
-                    Levels.instance.KillAll();
                     Levels.instance.LoadLevel();
                 }
 
@@ -23,7 +22,6 @@ public class Bloc : MonoBehaviour
             }
             case 'K': // Game Over!
             {
-                Levels.instance.KillAll();
                 Levels.instance.LoadLevel();
                 break;
             }
