@@ -28,6 +28,10 @@ public class Levels : MonoBehaviour
 
     public int coinObtained = 0;
     public int coinCollectedInLevel = 0;
+    
+    public Vector3 SpawnPosition { get; private set; } = Vector3.zero;
+
+    private Heros _localHero;
 
     private void Awake()
     {
@@ -37,20 +41,41 @@ public class Levels : MonoBehaviour
     public void LoadLevel()
     {
         if (!counting) counting = true;
+        Debug.Log($"[Levels] LoadLevel level={currentLevel}");
+
+        KillAll();
+
         try
         {
-            int numLevel = Levels.instance.currentLevel;
-            {
-                TextAsset txt = (TextAsset)Resources.Load("level" + numLevel.ToString("00"), typeof(TextAsset));
-                CreateLevel(txt.text);
-            }
-        } catch (Exception e)
+            int numLevel = currentLevel;
+            TextAsset txt = (TextAsset)Resources.Load("level" + numLevel.ToString("00"), typeof(TextAsset));
+            CreateLevel(txt.text);
+        }
+        catch (Exception e)
         {
-            // Search for new levels in StreamingAssets
-            string text = System.IO.File.ReadAllText(Application.streamingAssetsPath + "/level" + Levels.instance.currentLevel.ToString("00") + ".txt");
+            string text = System.IO.File.ReadAllText(
+                Application.streamingAssetsPath + "/level" + currentLevel.ToString("00") + ".txt"
+            );
             CreateLevel(text);
             Debug.Log("Level load error: " + e.Message);
             counting = false;   
+        }
+
+        if (_localHero == null)
+        {
+            Debug.Log("[Levels] Création d'un nouveau héros local.");
+            _localHero = Instantiate(herosPrefab, SpawnPosition, Quaternion.identity, this.transform);
+        }
+        else
+        {
+            Debug.Log("[Levels] Repositionnement du héros existant.");
+            _localHero.transform.position = SpawnPosition;
+            var rb = _localHero.GetComponent<Rigidbody>();
+            if (rb != null)
+            {
+                rb.linearVelocity = Vector3.zero;
+                rb.angularVelocity = Vector3.zero;
+            }
         }
     }
 
@@ -65,10 +90,7 @@ public class Levels : MonoBehaviour
         }
         else
         {
-            //assign string
             string levelString = www.downloadHandler.text;
-            
-            // generate now
             CreateLevel(levelString);
         }
     }
@@ -101,16 +123,13 @@ public class Levels : MonoBehaviour
         switch (blocType)
         {
             case 'S':
-                //Heros
-                Heros heros = Instantiate<Heros>(herosPrefab, this.transform);
-                heros.transform.position = position;
+                SpawnPosition = position;
                 break;
             default:
                 Bloc blocPrefab = blocsPrefabs.Find(bloc => bloc.typeChar == blocType);
                 if (blocPrefab != null)
                 {
-                    Bloc bloc = Instantiate<Bloc>(blocPrefab, this.transform);
-                    bloc.transform.position = position;
+                    Bloc bloc = Instantiate(blocPrefab, position, Quaternion.identity, this.transform);
                 }
                 break;
         }
@@ -122,6 +141,10 @@ public class Levels : MonoBehaviour
         {
             Destroy(child.gameObject);
         }
+
+        // Très important : on invalide la référence au héros local
+        _localHero = null;
+        Debug.Log("[Levels] KillAll : enfants détruits, _localHero remis à null.");
     }
 
     private void Update()
@@ -129,7 +152,6 @@ public class Levels : MonoBehaviour
         if (Input.GetKey(KeyCode.F))
         {
             instance.currentLevel = 1;
-            instance.KillAll();
             instance.LoadLevel();
             instance.SetCoins(0);
             instance.SetCoinsCollectedInLevel(0);
@@ -143,7 +165,11 @@ public class Levels : MonoBehaviour
         if (!counting) return;
         currentTime += Time.fixedDeltaTime;
         TimeSpan timeSpan = TimeSpan.FromSeconds(currentTime);
-        chronoLabel.text = string.Format("{0:D2}:{1:D2}:{2:D2}", timeSpan.Minutes, timeSpan.Seconds, timeSpan.Milliseconds / 10);
+        chronoLabel.text = string.Format("{0:D2}:{1:D2}:{2:D2}",
+            timeSpan.Minutes,
+            timeSpan.Seconds,
+            timeSpan.Milliseconds / 10
+        );
     }
     
     public void SetCoins(int count)

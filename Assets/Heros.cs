@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using Unity.Collections;
 
 public class Heros : MonoBehaviour
 {
@@ -7,10 +8,25 @@ public class Heros : MonoBehaviour
     float previousJump = 0;
     Rigidbody rigidbody;
     
-    void Start()
+    private void Awake()
     {
         rigidbody = GetComponent<Rigidbody>();
+        Debug.Log("Local player name: " + Environment.UserName);
     }
+
+    private void Start()
+    {
+        if (P2PNetwork.Instance != null)
+        {
+            Debug.Log("[P2P] Heros.Start → RegisterLocalHero");
+            P2PNetwork.Instance.RegisterLocalHero(this);
+        }
+        else
+        {
+            Debug.LogWarning("[P2P] Heros.Start : P2PNetwork.Instance est null, enregistrement réseau impossible (vérifie la scène).");
+        }
+    }
+
 
     void OnCollisionEnter(Collision collision)
     {
@@ -52,7 +68,6 @@ public class Heros : MonoBehaviour
     
     void FixedUpdate()
     {
-        
         if (Input.GetKey(KeyCode.LeftArrow) || Input.GetKey(KeyCode.A))
         {
             acceleration.x -= 0.2f;
